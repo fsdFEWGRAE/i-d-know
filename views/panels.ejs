@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Panels - GLOM Authorization</title>
+<link rel="stylesheet" href="/glom.css">
+</head>
+<body class="dash-bg">
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="sidebar">
+  <h3>GLOM</h3>
+  <ul>
+    <li onclick="location.href='/dashboard'">Dashboard</li>
+    <li onclick="location.href='/create'">Create</li>
+    <li onclick="location.href='/keys'">Keys</li>
+    <li onclick="location.href='/products'">Products</li>
+    <li onclick="location.href='/sources'">Sources</li>
+    <li onclick="location.href='/panels'">Panels</li>
+    <li onclick="location.href='/api'">API</li>
+    <li onclick="location.href='/logs'">Logs</li>
+    <li onclick="location.href='/settings'">Settings</li>
+  </ul>
+</div>
+<div class="dashboard-area">
+<h2>Panels Manager</h2>
+<button class="generate-btn" onclick="openAdd()">Add Panel</button>
+<table id="table"></table>
+</div>
+
+<div id="addModal" class="modal-bg">
+  <div class="glass-card" style="width:380px;">
+    <h3>Add Panel</h3>
+    <input class="glass-input" id="username" placeholder="Username">
+    <input class="glass-input" id="password" placeholder="Password">
+    <label>Product Permission:</label>
+    <select class="glass-input" id="productSelect"></select>
+    <button class="generate-btn" onclick="savePanel()">Save</button>
+    <button class="generate-btn" style="background:#444;" onclick="closeAdd()">Cancel</button>
+  </div>
+</div>
+
+<script>
+const token = localStorage.getItem("glom_token");
+if(!token) location.href="/login";
+
+function openAdd(){ document.getElementById("addModal").style.display="flex"; }
+function closeAdd(){ document.getElementById("addModal").style.display="none"; }
+
+async function savePanel(){
+  const u = document.getElementById("username").value;
+  const p = document.getElementById("password").value;
+  const pr = document.getElementById("productSelect").value;
+  await fetch("/panels/add",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json","Authorization":"Bearer "+token },
+    body: JSON.stringify({ username:u, password:p, product:pr })
+  });
+  closeAdd();
+  loadPanels();
+}
+
+async function toggleSuspend(username){
+  await fetch("/panels/toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json","Authorization":"Bearer "+token },
+    body: JSON.stringify({ username })
+  });
+  loadPanels();
+}
+
+async function deletePanel(username){
+  await fetch("/panels/delete",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json","Authorization":"Bearer "+token },
+    body: JSON.stringify({ username })
+  });
+  loadPanels();
+}
+
+async function loadPanels(){
+  const res = await fetch("/panels/list",{ headers:{ "Authorization":"Bearer "+token }});
+  const data = await res.json();
+  const table = document.getElementById("table");
+  table.innerHTML = `
+  <tr>
+    <th>Username</th><th>Products</th><th>Status</th><th>Actions</th>
+  </tr>`;
+  data.forEach(s=>{
+    table.innerHTML += `
+      <tr>
+       <td>${s.username}</td>
+       <td>${(s.productsAllowed||[]).join(", ")}</td>
+       <td>${s.status || "Active"}</td>
+       <td>
+        <button class="generate-btn" onclick="toggleSuspend('${s.username}')">Suspend/Active</button>
+        <button class="generate-btn" style="background:#700" onclick="deletePanel('${s.username}')">Delete</button>
+       </td>
+      </tr>`;
+  });
+}
+
+async function loadProducts(){
+  const res = await fetch("/product/list",{ headers:{ "Authorization":"Bearer "+token }});
+  const data = await res.json();
+  const sel = document.getElementById("productSelect");
+  sel.innerHTML = "";
+  data.forEach(p=> sel.innerHTML += `<option value="${p.name}">${p.name}</option>`);
+}
+
+loadProducts();
+loadPanels();
+</script>
+</body>
+</html>

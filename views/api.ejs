@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>API Manager - GLOM Authorization</title>
+<link rel="stylesheet" href="/glom.css">
+</head>
+<body class="dash-bg">
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="sidebar">
+  <h3>GLOM</h3>
+  <ul>
+    <li onclick="location.href='/dashboard'">Dashboard</li>
+    <li onclick="location.href='/create'">Create</li>
+    <li onclick="location.href='/keys'">Keys</li>
+    <li onclick="location.href='/products'">Products</li>
+    <li onclick="location.href='/sources'">Sources</li>
+    <li onclick="location.href='/panels'">Panels</li>
+    <li onclick="location.href='/api'">API</li>
+    <li onclick="location.href='/logs'">Logs</li>
+    <li onclick="location.href='/settings'">Settings</li>
+  </ul>
+</div>
+<div class="dashboard-area">
+<h2>API Manager</h2>
+<div class="glass-card" style="max-width:420px;">
+  <label>API Name:</label>
+  <input class="glass-input" id="apiName" placeholder="ex: cod-spoofer">
+  <label>Product:</label>
+  <select class="glass-input" id="product"></select>
+  <button class="generate-btn" onclick="saveAPI()">Create API</button>
+</div>
+<table id="table"></table>
+</div>
+<script>
+const token = localStorage.getItem("glom_token");
+if(!token) location.href="/login";
+
+async function loadProducts(){
+  const res = await fetch("/product/list",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  const sel = document.getElementById("product");
+  data.forEach(p=> sel.innerHTML += `<option value="${p.name}">${p.name}</option>`);
+}
+
+async function saveAPI(){
+  const apiName = document.getElementById("apiName").value;
+  const product = document.getElementById("product").value;
+  await fetch("/api-manager/create",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json","Authorization":"Bearer "+token },
+    body: JSON.stringify({ apiName, product })
+  });
+  loadAPI();
+}
+
+async function toggle(apiName){
+  await fetch("/api-manager/toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json","Authorization":"Bearer "+token },
+    body: JSON.stringify({ apiName })
+  });
+  loadAPI();
+}
+
+async function loadAPI(){
+  const res = await fetch("/api-manager/list",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  const table = document.getElementById("table");
+  table.innerHTML = `
+  <tr>
+    <th>API Name</th><th>Product</th><th>Status</th><th>Endpoint</th><th>Actions</th>
+  </tr>`;
+  data.forEach(a=>{
+    const base = location.origin;
+    const ep = `${base}/${a.apiName}/login`;
+    table.innerHTML += `
+      <tr>
+        <td>${a.apiName}</td>
+        <td>${a.product}</td>
+        <td>${a.enabled?"Enabled":"Disabled"}</td>
+        <td>${ep}</td>
+        <td><button class="generate-btn" onclick="toggle('${a.apiName}')">Enable/Disable</button></td>
+      </tr>`;
+  });
+}
+
+loadProducts();
+loadAPI();
+</script>
+</body>
+</html>

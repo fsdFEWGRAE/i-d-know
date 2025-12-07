@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Security Logs - GLOM Authorization</title>
+<link rel="stylesheet" href="/glom.css">
+<script src="/socket.io/socket.io.js"></script>
+</head>
+<body class="dash-bg">
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="sidebar">
+  <h3>GLOM</h3>
+  <ul>
+    <li onclick="location.href='/dashboard'">Dashboard</li>
+    <li onclick="location.href='/create'">Create</li>
+    <li onclick="location.href='/keys'">Keys</li>
+    <li onclick="location.href='/products'">Products</li>
+    <li onclick="location.href='/sources'">Sources</li>
+    <li onclick="location.href='/panels'">Panels</li>
+    <li onclick="location.href='/api'">API</li>
+    <li onclick="location.href='/logs'">Logs</li>
+    <li onclick="location.href='/settings'">Settings</li>
+  </ul>
+</div>
+
+<div class="dashboard-area">
+<h2>Security Console Logs</h2>
+
+<div class="glass-card" style="margin-bottom:20px;">
+  <label>Filter Type:</label>
+  <select id="filterType" class="glass-input">
+    <option value="">Any</option>
+    <option value="LOGIN">LOGIN</option>
+    <option value="API">API</option>
+    <option value="DISCORD">DISCORD</option>
+    <option value="HWID">HWID</option>
+    <option value="KEY">KEY</option>
+  </select>
+  <label>Status:</label>
+  <select id="filterStatus" class="glass-input">
+    <option value="">Any</option>
+    <option value="SUCCESS">SUCCESS</option>
+    <option value="FAIL">FAIL</option>
+  </select>
+  <label>User:</label>
+  <input id="filterUser" class="glass-input" placeholder="username or empty">
+  <label>IP:</label>
+  <input id="filterIP" class="glass-input" placeholder="ip or empty">
+  <button class="generate-btn" onclick="loadLogs()">Apply Filter</button>
+</div>
+
+<div class="glass-card" style="min-height:400px; max-height:600px; overflow-y:auto; font-family:Consolas,monospace; font-size:12px;" id="consoleBox">
+</div>
+</div>
+
+<script>
+const token = localStorage.getItem("glom_token");
+if(!token) location.href="/login";
+
+const socket = io();
+const consoleBox = document.getElementById("consoleBox");
+
+function appendLog(l){
+  const time = new Date(l.createdAt).toLocaleTimeString();
+  const color = l.status==="SUCCESS" ? "#5CFF7A" : (l.status==="FAIL" ? "#FF4B6E" : "#FFD966");
+  const line = document.createElement("div");
+  line.innerHTML = 
+    `<span style="color:#777;">${time}</span> `+
+    `<span style="color:${color};">[${l.type || "LOG"} ${l.status || ""}]</span> `+
+    `<span style="color:#fff;">${l.action || ""}</span> `+
+    `<span style="color:#999;">user:${l.user||"-"} ip:${l.ip||"-"} key:${l.keyUsed||"-"} hwid:${(l.hwid||"-").substring(0,12)}</span> `+
+    `<span style="color:#888;">${l.message||""}</span>`;
+  consoleBox.appendChild(line);
+  consoleBox.scrollTop = consoleBox.scrollHeight;
+}
+
+socket.on("log_event", (l)=>{
+  appendLog(l);
+});
+
+async function loadLogs(){
+  const type = document.getElementById("filterType").value;
+  const status = document.getElementById("filterStatus").value;
+  const user = document.getElementById("filterUser").value;
+  const ip = document.getElementById("filterIP").value;
+
+  const qs = new URLSearchParams();
+  if(type) qs.append("type", type);
+  if(status) qs.append("status", status);
+  if(user) qs.append("user", user);
+  if(ip) qs.append("ip", ip);
+
+  const res = await fetch("/logs/list?"+qs.toString(), {
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  consoleBox.innerHTML = "";
+  data.reverse().forEach(appendLog);
+}
+
+loadLogs();
+</script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard - GLOM Authorization</title>
+<link rel="stylesheet" href="/glom.css">
+</head>
+<body class="dash-bg">
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="sidebar">
+  <h3>GLOM</h3>
+  <ul>
+    <li onclick="location.href='/dashboard'">Dashboard</li>
+    <li onclick="location.href='/create'">Create</li>
+    <li onclick="location.href='/keys'">Keys</li>
+    <li onclick="location.href='/products'">Products</li>
+    <li onclick="location.href='/sources'">Sources</li>
+    <li onclick="location.href='/panels'">Panels</li>
+    <li onclick="location.href='/api'">API</li>
+    <li onclick="location.href='/logs'">Logs</li>
+    <li onclick="location.href='/settings'">Settings</li>
+  </ul>
+</div>
+
+<div class="dashboard-area">
+<h2>GLOM Panel — Dashboard</h2>
+
+<div class="card-grid">
+  <div class="glass-card">
+    <h3>Total Keys</h3>
+    <div id="totalKeys">...</div>
+  </div>
+  <div class="glass-card">
+    <h3>Total Sources</h3>
+    <div id="totalSources">...</div>
+  </div>
+  <div class="glass-card">
+    <h3>Total Panels</h3>
+    <div id="totalPanels">...</div>
+  </div>
+  <div class="glass-card">
+    <h3>Products</h3>
+    <div id="totalProducts">...</div>
+  </div>
+  <div class="glass-card">
+    <h3>Available APIs</h3>
+    <div id="totalAPI">...</div>
+  </div>
+  <div class="glass-card">
+    <h3>Your Role</h3>
+    <div id="role">...</div>
+  </div>
+</div>
+
+<h3 style="margin-top:40px;">Quick Access 🔥</h3>
+<div class="quick-btns">
+ <div class="quick-btn" onclick="location.href='/create'">Create</div>
+ <div class="quick-btn" onclick="location.href='/keys'">Keys</div>
+ <div class="quick-btn" onclick="location.href='/products'">Products</div>
+ <div class="quick-btn" onclick="location.href='/sources'">Sources</div>
+ <div class="quick-btn" onclick="location.href='/panels'">Panels</div>
+ <div class="quick-btn" onclick="location.href='/api'">API</div>
+ <div class="quick-btn" onclick="location.href='/settings'">Account</div>
+ <div class="quick-btn" onclick="location.href='/logs'">Security Logs</div>
+</div>
+
+</div>
+
+<script>
+const token = localStorage.getItem("glom_token");
+if(!token) location.href="/login";
+
+async function loadStats(){
+  const res = await fetch("/dashboard/stats", {
+    headers:{ "Authorization": "Bearer " + token }
+  });
+  const data = await res.json();
+  document.getElementById("totalKeys").innerText = data.keys ?? 0;
+  document.getElementById("totalSources").innerText = data.sources ?? 0;
+  document.getElementById("totalPanels").innerText = data.panels ?? 0;
+  document.getElementById("totalProducts").innerText = data.products ?? 0;
+  document.getElementById("totalAPI").innerText = data.apiCount ?? 0;
+  document.getElementById("role").innerText = data.role || "Unknown";
+}
+loadStats();
+</script>
+</body>
+</html>

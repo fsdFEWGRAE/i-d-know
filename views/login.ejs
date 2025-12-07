@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login - GLOM Authorization</title>
+  <link rel="stylesheet" href="/glom.css">
+</head>
+<body>
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="login-wrap">
+  <div class="login-title">GLOM Authorization</div>
+  <div class="login-sub">Secure Panel Login</div>
+
+  <label class="login-label">Username</label>
+  <input id="user" class="login-input" placeholder="Username">
+
+  <label class="login-label">Password</label>
+  <input id="pass" type="password" class="login-input" placeholder="Password">
+
+  <div id="twofa-block" style="display:none;">
+    <label class="login-label">2FA Code</label>
+    <input id="code2fa" class="login-input" placeholder="6-digit code">
+  </div>
+
+  <button class="generate-btn login-btn" onclick="doLogin()">Login</button>
+  <button class="generate-btn login-btn" style="margin-top:6px;background:#5865F2;border-color:#7b88ff;" onclick="discordLogin()">Login with Discord</button>
+
+  <div class="msg" id="msg"></div>
+
+  <div class="back-landing" onclick="location.href='/'">
+    ← Back to landing
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const autoToken = urlParams.get("token");
+if(autoToken){
+  localStorage.setItem("glom_token", autoToken);
+  window.location.href = "/dashboard";
+}
+
+let need2FA = false;
+
+function showMessage(text) {
+  document.getElementById("msg").innerText = text || "";
+}
+
+async function doLogin() {
+  const username = document.getElementById("user").value.trim();
+  const password = document.getElementById("pass").value;
+  const code2fa = need2FA ? document.getElementById("code2fa").value.trim() : "";
+
+  if (!username || !password) {
+    showMessage("Please fill username & password.");
+    return;
+  }
+
+  showMessage("Logging in...");
+
+  try {
+    const res = await fetch("/login", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ username, password, code2fa })
+    });
+
+    const data = await res.json();
+
+    if (data.status === "need2fa") {
+      need2FA = true;
+      document.getElementById("twofa-block").style.display = "block";
+      showMessage("Enter your 2FA code.");
+      return;
+    }
+
+    if (data.status === "success" && data.token) {
+      localStorage.setItem("glom_token", data.token);
+      showMessage("Success, redirecting...");
+      window.location.href = "/dashboard";
+      return;
+    }
+
+    if (data.status === "error") {
+      showMessage(data.message || "Login failed.");
+      return;
+    }
+
+    showMessage("Unknown response.");
+  } catch (e) {
+    console.error(e);
+    showMessage("Connection error.");
+  }
+}
+
+function discordLogin(){
+  // we use state="login" in redirect handled in discord route
+  window.location.href = "/auth/discord?login=1";
+}
+
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter") doLogin();
+});
+</script>
+</body>
+</html>

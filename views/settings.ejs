@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Settings - GLOM Authorization</title>
+<link rel="stylesheet" href="/glom.css">
+</head>
+<body class="dash-bg">
+<div id="mouse-glow"></div>
+<script src="/glom.js"></script>
+<div class="sidebar">
+  <h3>GLOM</h3>
+  <ul>
+    <li onclick="location.href='/dashboard'">Dashboard</li>
+    <li onclick="location.href='/create'">Create</li>
+    <li onclick="location.href='/keys'">Keys</li>
+    <li onclick="location.href='/products'">Products</li>
+    <li onclick="location.href='/sources'">Sources</li>
+    <li onclick="location.href='/panels'">Panels</li>
+    <li onclick="location.href='/api'">API</li>
+    <li onclick="location.href='/logs'">Logs</li>
+    <li onclick="location.href='/settings'">Settings</li>
+  </ul>
+</div>
+<div class="dashboard-area">
+<h2>Account Settings</h2>
+<div class="glass-card" id="accCard">
+  <h3>Account</h3>
+  <div id="accInfo">Loading...</div>
+</div>
+
+<div class="glass-card">
+  <h3>Google 2FA</h3>
+  <div id="twofaInfo">Status: ...</div>
+  <button class="generate-btn" onclick="enable2FA()">Enable 2FA</button>
+  <button class="generate-btn" style="background:#700;" onclick="disable2FA()">Disable 2FA</button>
+  <div id="twofaQR"></div>
+</div>
+
+<div class="glass-card">
+  <h3>Discord Account</h3>
+  <div id="discord-status">Loading...</div>
+  <button class="generate-btn" onclick="linkDiscord()">Link Discord</button>
+  <button class="generate-btn" style="background:#700;" onclick="unlinkDiscord()">Unlink</button>
+</div>
+</div>
+
+<script>
+const token = localStorage.getItem("glom_token");
+if(!token) location.href="/login";
+
+async function loadMe(){
+  const res = await fetch("/settings/me",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  document.getElementById("accInfo").innerText =
+    `User: ${data.username} | Role: ${data.role} | Status: ${data.status}`;
+  document.getElementById("twofaInfo").innerText =
+    "Status: " + (data.has2FA ? "Enabled" : "Disabled");
+}
+
+async function enable2FA(){
+  const res = await fetch("/settings/enable-2fa",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  if(data.status==="success"){
+    document.getElementById("twofaQR").innerHTML =
+      `<p>Scan QR in Google Authenticator:</p><img src="${data.qr}" style="max-width:200px;">`+
+      `<p>Secret: ${data.secret}</p>`;
+    loadMe();
+  }
+}
+
+async function disable2FA(){
+  await fetch("/settings/disable-2fa",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  document.getElementById("twofaQR").innerHTML = "";
+  loadMe();
+}
+
+async function getDiscordStatus(){
+  const res = await fetch("/settings/discord-status",{
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  const data = await res.json();
+  if(!data.linked)
+    document.getElementById("discord-status").innerText = "Discord is not linked.";
+  else
+    document.getElementById("discord-status").innerHTML = "Linked as: <b>"+data.username+"</b>";
+}
+
+function linkDiscord(){
+  // state will be JWT of current user
+  window.location.href = "/settings/link-discord";
+}
+async function unlinkDiscord(){
+  await fetch("/settings/unlink-discord",{
+    method:"POST",
+    headers:{ "Authorization":"Bearer "+token }
+  });
+  getDiscordStatus();
+}
+
+loadMe();
+getDiscordStatus();
+</script>
+</body>
+</html>
